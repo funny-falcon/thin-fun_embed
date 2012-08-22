@@ -9,6 +9,19 @@ rack application's response to client.
 
 It is capable to serve keep-alive requests (but not pipelined).
 
+It is faster than Thin itself cause it allows you to send very custom response, and even for Rack like
+response it doesn't do many checks on your output. But it meens, that you responsible for you response :)
+
+Rack hello world, tested with +ab -k -c 500 -n 50000 127.0.0.1:8080/+ on Core i3@1600Mhz
+
+* with Thin::FunEmbed (see examples/rack_like.rb) ~ 14000 req/sec
+* with `thin -p 8080 -e production start` ~ 6500 req/sec
+
+(But consider, that this is for very dump response. Do not expect big speedup for heavy weight ones')
+
+Also, it doesn't bother with keep-alive timeouts, limits and many other things that Thin do. But it is not
+too hard too look for them in the Thin's sources. And, in any way, it is better to place this "server" behind
+"something like" Nginx, which could use keep-alive connections to upstream since version 1.1 .
 
 == Installation
 

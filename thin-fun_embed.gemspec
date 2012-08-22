@@ -10,7 +10,7 @@ Gem::Specification.new do |gem|
 
   gem.homepage      = "https://github.com/funny-falcon/thin-fun_embed"
 
-  gem.files         = Dir["examples/*.rb"] + Dir["lib/**/*.rb"] +
+  gem.files         = Dir["examples/*"] + Dir["lib/**/*.rb"] +
                       %w{Gemfile LICENSE Rakefile README.rdoc thin-fun_embed.gemspec}
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.name          = "thin-fun_embed"
