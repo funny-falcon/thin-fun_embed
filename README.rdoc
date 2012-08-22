@@ -1,0 +1,105 @@
+= Thin::FunEmbed
+
+This is minimalistic web server for embedding into EventMachine-enabled application
+based on {idea of Nils Franzén}[http://www.franzens.org/2011/10/writing-minimalistic-web-server-using.html],
+but it uses origin Thin::Request instead of custom wrapper to thin parser.
+
+It is intentionally not full fledge rack server, but you could use +send_status_headers_body+ to return
+rack application's response to client.
+
+It is capable to serve keep-alive requests (but not pipelined).
+
+
+== Installation
+
+Add this line to your application's Gemfile:
+
+    gem 'thin-fun_embed'
+
+And then execute:
+
+    $ bundle
+
+Or install it yourself as:
+
+    $ gem install thin-fun_embed
+
+== Usage
+
+You should subclass Thin::FunEmbed and override #handle_http_request method. Then you should start it with
+EM.start_server as any other EM::Connection .
+
+Abstract example:
+  require 'thin/fun_embed.rb'
+  class MyServer < Thin::FunEmbed
+    def handle_http_request(env)
+      if rack_like_response?
+        send_status_headers_body(status, headers, body)
+      elsif is_200_ok?
+        send_200_ok(body)
+      elsif is_status_body?
+        send_status_body(status, body)
+      elsif is_raw_string?
+        send_raw_string(full_http_response_string, try_to_keep_alive)
+      end
+    end
+  end
+  
+  host, port = '0.0.0.0', 8080
+  EM.run do
+    EM.start_server host, port, MyServer
+  end
+
+200 ok example:
+  require 'thin/fun_embed.rb'
+
+  class Simple200ok < Thin::FunEmbed
+    def handle_http_request(env)
+      if rand(2) == 1
+        send_200_ok('{"hello":"world"}', 'application/javascript')
+      else
+        send_200_ok('hello world')
+      end
+    end
+  end
+
+  EM.run do
+    EM.start_server '0.0.0.0', 8080, Simple200ok
+  end
+
+Rack like example with correct socket closing:
+  require 'thin/fun_embed.rb'
+
+  class RackLikeServer < Thin::FunEmbed
+    attr_accessor :app
+    def handle_http_request(env)
+      send_rack_response(*app.call(env))
+    end
+  end
+
+  app = proc{|env| [200, {'Content-Length'=>6}, ['hello', "\n"]]}
+
+  host, port = '0.0.0.0', 8080
+  all_conns = {}
+  trap(:INT) do 
+    EM.schedule{ 
+      all_conns.each{|conn, _| conn.close_after_writting}
+      EM.next_tick{ EM.stop }
+    } 
+  end
+
+  EM.run do
+    EM.start_server host, port, RackLikeServer do |conn|
+      conn.app = app
+      all_conns[conn] = true
+      conn.unbind_callback = all_conns.method(:delete)
+    end
+  end
+
+== Contributing
+
+1. Fork it
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Added some feature'`)
+4. Push to the branch (`git push origin my-new-feature`)
+5. Create new Pull Request
