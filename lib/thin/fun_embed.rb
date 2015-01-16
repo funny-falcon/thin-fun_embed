@@ -165,7 +165,7 @@ module Thin # :nodoc:
 
     # call this when you fully send response
     def consider_keep_alive(try_keep_alive = true)
-      @request.close  rescue nil
+      @parser.close  rescue nil
       if @keep_alive && try_keep_alive
         post_init
       else
