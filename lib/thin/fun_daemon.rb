@@ -21,12 +21,13 @@ module Thin
     def self.trap
       return if @trap_set
       @trap_set = true
-      ::Signal.trap(:INT){ trap_call }
-      ::Signal.trap(:TERM){ trap_call }
-      ::Signal.trap(:QUIT){ trap_call }
+      @prev_traps = {}
+      [:INT, :TERM, :QUIT].each do |name|
+        @prev_traps[name] = ::Signal.trap(name){|sig| trap_call(name, sig) }
+      end
     end
 
-    def self.trap_call
+    def self.trap_call(name, sig)
       @trap_called = true
       Thread.new do
         EM.schedule do
@@ -35,16 +36,20 @@ module Thin
           end
           if @conns && !@conns.empty?
             @conns.each do |conn, _|
-              conn.close_connection_after_writing
+              conn.force_close!
             end
           else
             EM.next_tick{ EM.stop }
           end
         end
       end
-      ::Signal.trap(:INT, 'DEFAULT')
-      ::Signal.trap(:TERM, 'DEFAULT')
-      ::Signal.trap(:QUIT, 'DEFAULT')
+      @prev_traps.each do |nm, prev|
+        if nm == name && prev.respond_to?(:call)
+          prev.call(sig)
+          next
+        end
+        ::Signal.trap(nm, prev)
+      end
     end
 
     def self.run_class(host, port, klass, *args, &block)

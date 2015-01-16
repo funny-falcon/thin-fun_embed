@@ -60,6 +60,7 @@ module Thin # :nodoc:
 
     def post_init
       @keep_alive = nil
+      @force_close = false
       @parser = Thin::Request.new
     end
 
@@ -166,7 +167,7 @@ module Thin # :nodoc:
     # call this when you fully send response
     def consider_keep_alive(try_keep_alive = true)
       @parser.close  rescue nil
-      if @keep_alive && try_keep_alive
+      if @keep_alive && try_keep_alive && !@force_close
         post_init
       else
         close_connection_after_writing
@@ -175,6 +176,10 @@ module Thin # :nodoc:
 
     def unbind # :nodoc:
       @unbind_callback && @unbind_callback.call(self)
+    end
+
+    def force_close!
+      @force_close = true
     end
   end
 
