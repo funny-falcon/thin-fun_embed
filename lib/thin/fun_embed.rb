@@ -180,8 +180,16 @@ module Thin # :nodoc:
 
   class FunRackLike < FunEmbed
     attr_accessor :app
+    ASYNC_CALLBACK = 'async.callback'.freeze
+    FUN_EMBED = 'async.fun_embed'.freeze
+    AsyncResponse = [-1, {}.freeze, [].freeze].freeze
     def handle_http_request(env)
-      send_rack_response(*app.call(env))
+      env[ASYNC_CALLBACK] = method(:send_rack_response)
+      env[FUN_EMBED] = self
+      res = app.call(env)
+      if res[0] != -1
+        send_rack_response(*res)
+      end
     end
   end
 end
