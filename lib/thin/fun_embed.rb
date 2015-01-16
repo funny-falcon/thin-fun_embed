@@ -177,4 +177,11 @@ module Thin # :nodoc:
       @unbind_callback && @unbind_callback.call(self)
     end
   end
+
+  class FunRackLike < FunEmbed
+    attr_accessor :app
+    def handle_http_request(env)
+      send_rack_response(*app.call(env))
+    end
+  end
 end
