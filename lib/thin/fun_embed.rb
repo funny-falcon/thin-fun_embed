@@ -149,6 +149,18 @@ module Thin # :nodoc:
           end
         end
 
+        if content_length.nil?
+          if String === body
+            content_length = body.bytesize
+          elsif Array === body && body.all?{|b| String === body}
+            content_length = 0
+            body.each{|s| content_length += s.bytesize}
+          end
+          unless content_length.nil?
+            out << "Content-Length: #{content_length}\r\n"
+          end
+        end
+
         try_keep_alive &&= @keep_alive && content_length && (!connection || connection == KEEP_ALIVE)
         out << FULL_KEEP_ALIVE  if try_keep_alive && !connection
       end
